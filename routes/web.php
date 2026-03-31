@@ -8,6 +8,8 @@ use App\Http\Controllers\AuthController;
 Route::get('/', [ReportController::class, 'create'])->name('home'); // alias home
 Route::get('/reports/create', [ReportController::class, 'create'])->name('reports.create');
 Route::post('/reports/store', [ReportController::class, 'store'])->name('reports.store');
+Route::get('/cek-laporan', [ReportController::class, 'cekForm']);
+Route::post('/cek-laporan', [ReportController::class, 'cekStatus']);
 
 // 🔹 LOGIN ADMIN
 Route::get('/admin/login', [AuthController::class, 'showLoginForm'])->name('admin.login');

@@ -16,6 +16,74 @@
         </form>
     </div>
 </div>
+<form method="GET" action="{{ route('reports.index') }}" class="row g-2 mb-3">
+
+    {{-- Filter Divisi --}}
+    <div class="col-md-3">
+        <select name="departemen" class="form-control">
+
+            <option value="">-- Semua Divisi --</option>
+
+            <option value="Administrasi"
+                {{ request('departemen')=='Administrasi' ? 'selected' : '' }}>
+                Administrasi
+            </option>
+
+            <option value="Produksi"
+                {{ request('departemen')=='Produksi' ? 'selected' : '' }}>
+                Produksi
+            </option>
+
+            <option value="Keuangan"
+                {{ request('departemen')=='Keuangan' ? 'selected' : '' }}>
+                Keuangan
+            </option>
+
+            <option value="Gudang"
+                {{ request('departemen')=='Gudang' ? 'selected' : '' }}>
+                Gudang
+            </option>
+
+            <option value="HRD"
+                {{ request('departemen')=='HRD' ? 'selected' : '' }}>
+                HRD
+            </option>
+
+            <option value="Marketing"
+                {{ request('departemen')=='Marketing' ? 'selected' : '' }}>
+                Marketing
+            </option>
+
+            <option value="IT"
+                {{ request('departemen')=='IT' ? 'selected' : '' }}>
+                IT
+            </option>
+
+        </select>
+    </div>
+
+    {{-- Search --}}
+    <div class="col-md-4">
+        <input type="text"
+               name="search"
+               class="form-control"
+               placeholder="Cari laporan..."
+               value="{{ request('search') }}">
+    </div>
+
+    {{-- Tombol --}}
+    <div class="col-md-3 d-flex gap-2">
+        <button class="btn btn-primary">
+            🔍 Filter
+        </button>
+
+        <a href="{{ route('reports.index') }}"
+           class="btn btn-secondary">
+            🔄 Reset
+        </a>
+    </div>
+
+</form>
 
 {{-- FILTER STATUS --}}
 <div class="mb-3">
@@ -61,19 +129,17 @@
 </form>
 
 {{-- EXPORT --}}
-<a href="{{ route('reports.export', [
-        'from' => request('from'),
-        'to' => request('to'),
-        'status' => request('status')
-    ]) }}" class="btn btn-warning btn-sm mb-3">
+<a href="{{ route('reports.export', request()->all()) }}"
+   class="btn btn-warning btn-sm mb-3">
     📥 Export Excel
 </a>
 
-{{-- SEARCH BAR (TAMBAHKAN DI SINI) --}}
+{{-- SEARCH --}}
 <form method="GET" action="{{ route('reports.index') }}" class="input-group mb-3" style="max-width: 350px;">
     <input type="text" name="search" value="{{ request('search') }}"
            class="form-control form-control-sm" placeholder="🔍 Cari laporan...">
-    <button class="btn btn-primary btn-sm" type="submit">Cari</button>
+
+    <button class="btn btn-primary btn-sm">Cari</button>
 
     <input type="hidden" name="status" value="{{ request('status') }}">
     <input type="hidden" name="from" value="{{ request('from') }}">
@@ -106,7 +172,10 @@
                     <span class="badge bg-success">Selesai</span>
                 @endif
 
-                <br><small class="text-muted">Tanggal: {{ $report->tanggal_laporan }}</small>
+                <br>
+                <small class="text-muted">
+                    Tanggal: {{ $report->tanggal_laporan }}
+                </small>
 
                 {{-- FOTO --}}
                 @if($report->foto)
@@ -115,10 +184,13 @@
                          class="shadow-sm"
                          data-bs-toggle="modal"
                          data-bs-target="#fotoModal{{ $report->id }}"
-                         style="max-width: 180px; border-radius: 8px; cursor:pointer">
+                         style="max-width:180px;border-radius:8px;cursor:pointer">
+
                     <br>
                     <a href="{{ asset('uploads/laporan/' . $report->foto) }}" download
-                       class="btn btn-outline-primary btn-sm mt-2">⬇ Download Foto</a>
+                       class="btn btn-outline-primary btn-sm mt-2">
+                        ⬇ Download Foto
+                    </a>
                 </div>
                 @endif
             </div>
@@ -130,10 +202,9 @@
                 @method('DELETE')
                 <button class="btn btn-danger btn-sm">Hapus</button>
             </form>
-
         </div>
 
-        {{-- UPDATE FORM --}}
+        {{-- UPDATE --}}
         <form action="{{ route('reports.update', $report->id) }}" method="POST" class="mt-3">
             @csrf
             @method('PUT')
@@ -148,7 +219,8 @@
                 </div>
 
                 <div class="col-md-7">
-                    <textarea name="catatan_teknisi" rows="1" class="form-control form-control-sm"
+                    <textarea name="catatan_teknisi" rows="1"
+                              class="form-control form-control-sm"
                               placeholder="Catatan teknisi">{{ $report->catatan_teknisi }}</textarea>
                 </div>
 
@@ -177,5 +249,15 @@
 @empty
 <div class="alert alert-info mt-3">Belum ada laporan.</div>
 @endforelse
+
+{{-- PAGINATION --}}
+<div class="d-flex justify-content-between align-items-center mt-4">
+    <small class="text-muted">
+        Menampilkan {{ $reports->firstItem() }} - {{ $reports->lastItem() }}
+        dari {{ $reports->total() }} laporan
+    </small>
+
+    {{ $reports->links() }}
+</div>
 
 @endsection

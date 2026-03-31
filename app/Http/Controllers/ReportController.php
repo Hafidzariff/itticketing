@@ -6,6 +6,7 @@ use App\Models\Report;
 use Illuminate\Http\Request;
 use App\Mail\ReportCreatedMail;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\DB;
 use App\Exports\ReportsExport;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -18,41 +19,104 @@ class ReportController extends Controller
     }
 
     // 🟢 Simpan laporan baru + kirim email notifikasi ke admin
-    public function store(Request $request)
-    {
-        $request->validate([
-            'nama_pelapor' => 'required',
-            'departemen' => 'required',
-            'jenis_masalah' => 'required',
-            'deskripsi' => 'required',
-            'foto' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
-        ]);
+   public function store(Request $request)
+{
+    $request->validate([
 
-        $filename = null;
+        'nama_pelapor'   => 'required',
 
-        if ($request->hasFile('foto')) {
-            $file = $request->file('foto');
-            $filename = time() . '-' . $file->getClientOriginalName();
-            $file->move(public_path('uploads/laporan'), $filename);
-        }
+        'departemen'    => 'required',
 
-        $report = Report::create([
-            'nama_pelapor' => $request->nama_pelapor,
-            'departemen' => $request->departemen,
-            'tanggal_laporan' => now(),
-            'jenis_masalah' => $request->jenis_masalah,
-            'deskripsi' => $request->deskripsi,
-            'status' => 'Baru',
-            'foto' => $filename,
-        ]);
+        // wajib isi kalau pilih Lainnya
+        'departemen_lainnya' => 'required_if:departemen,Lainnya',
 
-        Mail::to(env('ADMIN_EMAIL', 'admin@surabraja.co.id'))
-            ->queue(new ReportCreatedMail($report));
+        'jenis_masalah' => 'required',
 
-        return redirect()->back()->with('success', '✅ Laporan berhasil dikirim dan notifikasi telah dikirim ke admin!');
+        'deskripsi'     => 'required',
+
+        'foto'          => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+    ]);
+
+
+    // Upload Foto
+    $filename = null;
+
+    if ($request->hasFile('foto')) {
+
+        $file = $request->file('foto');
+
+        $filename = time() . '-' . $file->getClientOriginalName();
+
+        $file->move(public_path('uploads/laporan'), $filename);
     }
 
-    // 🟢 Tampilkan daftar laporan + FILTER + SEARCH
+
+    // Simpan Report
+    $report = Report::create([
+
+        'kode_laporan' => $this->generateKode(),
+
+        'nama_pelapor' => $request->nama_pelapor,
+
+
+        // ✅ LOGIKA LAINNYA DI SINI
+        'departemen' => $request->departemen === 'Lainnya'
+            ? $request->departemen_lainnya
+            : $request->departemen,
+
+
+        'tanggal_laporan' => now(),
+
+        'jenis_masalah' => $request->jenis_masalah,
+
+        'deskripsi' => $request->deskripsi,
+
+        'status' => 'Baru',
+
+        'foto' => $filename,
+    ]);
+
+
+    // Kirim Email
+    Mail::to(env('ADMIN_EMAIL', 'admin@surabraja.co.id'))
+        ->queue(new ReportCreatedMail($report));
+
+
+    return redirect()->back()->with(
+        'success',
+        '✅ Laporan berhasil dikirim!
+        Kode laporan Anda: '.$report->kode_laporan.'
+        (Simpan kode ini untuk cek status)'
+    );
+}
+
+    private function generateKode()
+{
+    return 'LP-' . strtoupper(uniqid());
+}
+// Form cek laporan
+public function cekForm()
+{
+    return view('reports.cek');
+}
+
+// Proses cek laporan
+public function cekStatus(Request $request)
+{
+    $request->validate([
+        'kode_laporan' => 'required'
+    ]);
+
+    $report = Report::where('kode_laporan', $request->kode_laporan)->first();
+
+    if (!$report) {
+        return back()->with('error', '❌ Kode laporan tidak ditemukan');
+    }
+
+    return view('reports.cek-hasil', compact('report'));
+}
+
+    // 🟢 Daftar laporan + FILTER + SEARCH + PAGINATION
     public function index(Request $request)
     {
         $query = Report::orderBy('created_at', 'desc');
@@ -71,8 +135,12 @@ class ReportController extends Controller
         if ($request->filled('to')) {
             $query->whereDate('tanggal_laporan', '<=', $request->to);
         }
+        // 🔍 Filter departemen (divisi)
+        if ($request->filled('departemen')) {
+            $query->where('departemen', $request->departemen);
+        }
 
-        // 🔍 SEARCH
+        // 🔍 Search
         if ($request->filled('search')) {
             $keyword = $request->search;
 
@@ -83,62 +151,103 @@ class ReportController extends Controller
                   ->orWhere('deskripsi', 'LIKE', "%$keyword%");
             });
         }
+        
 
-        $reports = $query->get();
+        // ✅ PAGINATION (INTI PERUBAHAN)
+        $reports = $query
+            ->paginate(5) // ubah jumlah data per halaman di sini
+            ->withQueryString();
 
         return view('reports.index', compact('reports'));
     }
+
+    
 
     // 🟢 Update status laporan
     public function update(Request $request, Report $report)
     {
         $report->update([
-            'status' => $request->status,
-            'catatan_teknisi' => $request->catatan_teknisi,
-            'tanggal_selesai' => $request->status === 'Selesai' ? now() : null,
+            'status'            => $request->status,
+            'catatan_teknisi'   => $request->catatan_teknisi,
+            'tanggal_selesai'   => $request->status === 'Selesai' ? now() : null,
         ]);
 
-        return redirect()->route('reports.index')->with('success', '✅ Status laporan berhasil diperbarui.');
+        return redirect()
+            ->route('reports.index')
+            ->with('success', '✅ Status laporan berhasil diperbarui.');
     }
 
     // 🟢 Hapus laporan
     public function destroy(Report $report)
     {
         $report->delete();
-        return redirect()->route('reports.index')->with('success', '🗑️ Laporan berhasil dihapus.');
+
+        return redirect()
+            ->route('reports.index')
+            ->with('success', '🗑️ Laporan berhasil dihapus.');
     }
 
     // 🟢 Hapus semua laporan
     public function destroyAll()
     {
         Report::truncate();
-        return redirect()->route('reports.index')->with('success', '🗑️ Semua laporan berhasil dihapus.');
+
+        return redirect()
+            ->route('reports.index')
+            ->with('success', '🗑️ Semua laporan berhasil dihapus.');
     }
 
     // 🟢 Export laporan ke Excel + ikut filter
-    public function export(Request $request)
-    {
-        return Excel::download(
-            new ReportsExport(
-                $request->from,
-                $request->to,
-                $request->status,
-                $request->search
-            ),
-            'laporan_masuk.xlsx'
-        );
-    }
+   public function export(Request $request)
+{
+    return Excel::download(
+
+        new ReportsExport(
+
+            $request->from,
+            $request->to,
+            $request->status,
+            $request->search,
+            $request->departemen
+        ),
+
+        'laporan_export_' . now()->format('Ymd_His') . '.xlsx'
+    );
+}
 
     // 🟢 Dashboard admin
     public function dashboard()
-    {
-        $total   = Report::count();
-        $selesai = Report::where('status', 'Selesai')->count();
-        $proses  = Report::where('status', 'Sedang Dikerjakan')->count();
-        $baru    = Report::where('status', 'Baru')->count();
+{
+    $total   = Report::count();
+    $selesai = Report::where('status', 'Selesai')->count();
+    $proses  = Report::where('status', 'Sedang Dikerjakan')->count();
+    $baru    = Report::where('status', 'Baru')->count();
 
-        $laporanBaru = Report::where('status', 'Baru')->latest()->take(3)->get();
+    $laporanBaru = Report::where('status', 'Baru')
+        ->latest()
+        ->take(3)
+        ->get();
 
-        return view('reports.dashboard', compact('total', 'selesai', 'proses', 'baru', 'laporanBaru'));
-    }
+    // ✅ DATA UNTUK DIAGRAM (PER DEPARTEMEN / HELPDESK)
+    $diagramHelpdesk = Report::select(
+            'departemen',
+            DB::raw('COUNT(*) as total')
+        )
+        ->groupBy('departemen')
+        ->get();
+
+    return view(
+        'reports.dashboard',
+        compact(
+            'total',
+            'selesai',
+            'proses',
+            'baru',
+            'laporanBaru',
+            'diagramHelpdesk' // <- kirim ke view
+        )
+    );
+}
+
+    
 }
