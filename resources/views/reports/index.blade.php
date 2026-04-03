@@ -257,7 +257,9 @@
         dari {{ $reports->total() }} laporan
     </small>
 
-    {{ $reports->links() }}
+   <div class="text-center mt-4">
+    {{ $reports->links('pagination::bootstrap-5') }}
+</div>
 </div>
 
 @endsection

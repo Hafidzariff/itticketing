@@ -9,16 +9,16 @@ class Report extends Model
     use HasFactory;
 
     protected $fillable = [
-        'kode_laporan',
-        'nama_pelapor',
-        'departemen_lainnya'  => 'required_if:departemen,Lainnya',
-        'tanggal_laporan',
-        'jenis_masalah',
-        'deskripsi',
-        'status',
-        'tanggal_selesai',
-        'catatan_teknisi',
-        'foto',
-        'similarity', // ← wajib ditambahkan
-    ];
+    'kode_laporan',
+    'nama_pelapor',
+    'departemen', // ✅ INI YANG PENTING
+    'tanggal_laporan',
+    'jenis_masalah',
+    'deskripsi',
+    'status',
+    'tanggal_selesai',
+    'catatan_teknisi',
+    'foto',
+    'similarity',
+];
 }

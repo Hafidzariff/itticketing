@@ -72,15 +72,17 @@
     </div>
 
 
-    {{-- Input Divisi Lainnya --}}
-    <div class="mb-3 d-none" id="divisi-lainnya">
-        <label>Divisi Lainnya</label>
+   {{-- Input Divisi Lainnya --}}
+        <div class="mb-3 d-none" id="divisi-lainnya">
+            <label>Divisi Lainnya</label>
 
-        <input type="text"
-               name="departemen_lainnya"
-               class="form-control"
-               placeholder="Masukkan nama divisi">
-    </div>
+            <input type="text"
+                name="departemen_lainnya"
+                id="departemen_lainnya"
+                class="form-control"
+                placeholder="Masukkan nama divisi"
+                value="{{ old('departemen_lainnya') }}">
+        </div>
 
 
     {{-- Jenis Masalah --}}
@@ -137,18 +139,25 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const select = document.getElementById('departemen');
     const lainnya = document.getElementById('divisi-lainnya');
+    const input = document.getElementById('departemen_lainnya');
 
-    select.addEventListener('change', function () {
-
-        if (this.value === 'Lainnya') {
+    function toggleLainnya() {
+        if (select.value === 'Lainnya') {
             lainnya.classList.remove('d-none');
+            input.required = true;
         } else {
             lainnya.classList.add('d-none');
+            input.required = false;
+            input.value = '';
         }
+    }
 
-    });
+    // jalan saat halaman load (biar tidak bug)
+    toggleLainnya();
+
+    // jalan saat user ganti pilihan
+    select.addEventListener('change', toggleLainnya);
 
 });
 </script>
-
 @endsection
