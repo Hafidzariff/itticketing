@@ -39,15 +39,25 @@ class ReportController extends Controller
                 : 'Lainnya';
         }
 
-        // Upload foto
+       // Upload foto
         $filename = null;
 
         if ($request->hasFile('foto')) {
             $file = $request->file('foto');
-            $filename = time() . '-' . $file->getClientOriginalName();
-            $file->move(public_path('uploads/laporan'), $filename);
-        }
 
+            $filename = time() . '-' . $file->getClientOriginalName();
+
+            // Path langsung ke public_html
+            $destination = $_SERVER['DOCUMENT_ROOT'] . '/uploads/laporan';
+
+            // Buat folder jika belum ada
+            if (!file_exists($destination)) {
+                mkdir($destination, 0777, true);
+            }
+
+            // Upload file
+            $file->move($destination, $filename);
+        }
         // Simpan data
         $report = Report::create([
             'kode_laporan'     => $this->generateKode(),
