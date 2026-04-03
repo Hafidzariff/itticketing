@@ -75,7 +75,7 @@
     <div class="container">
         
         <a class="navbar-brand fw-bold d-flex align-items-center" href="{{ url('/') }}">
-            <img src="{{ asset('img/logosurabraja.png') }}" alt="Logo Surabraja">
+           <img src="{{ asset('logosurabraja.png') }}" alt="Logo Surabraja">
             Helpdesk Surabraja
         </a>
 
